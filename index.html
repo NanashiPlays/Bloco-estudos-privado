@@ -5,12 +5,110 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bloco de Estudos Privado</title>
 
-  <!-- Firebase (APENAS modular, versão moderna) -->
+  <!-- ================== ESTILO ================== -->
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #020617;
+      --primary: #2563eb;
+      --danger: #dc2626;
+    }
+
+    body.dark {
+      --bg: #020617;
+      --card: #020617;
+      --text: #e5e7eb;
+      --primary: #38bdf8;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 12px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+    }
+
+    textarea {
+      min-height: 120px;
+    }
+
+    button {
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+    }
+
+    .note {
+      background: var(--card);
+      padding: 12px;
+      border-radius: 10px;
+      margin-top: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,.2);
+    }
+
+    .date {
+      font-size: 12px;
+      opacity: .7;
+    }
+
+    .delete {
+      background: var(--danger);
+      margin-top: 8px;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>📘 Meus Estudos</h1>
+
+    <!-- LOGIN VISUAL -->
+    <div id="login">
+      <input type="password" id="password" placeholder="Senha" />
+      <button onclick="login()">Entrar</button>
+    </div>
+
+    <!-- APP -->
+    <div id="app" class="hidden">
+      <button onclick="toggleTheme()">🌙 / ☀️</button>
+      <input id="search" placeholder="Pesquisar notas..." />
+      <textarea id="newNote" placeholder="Nova anotação..."></textarea>
+      <button onclick="addNote()">Salvar anotação</button>
+      <div id="notes"></div>
+    </div>
+  </div>
+
+  <!-- ================== SCRIPT ================== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
-    /* ================== CONFIG FIREBASE ================== */
+    /* FIREBASE CONFIG */
     const firebaseConfig = {
       apiKey: "AIzaSyBq_v_3jpcr3Gzk2QfuOiG4aiPkvnVKoDc",
       authDomain: "bloco-estudos.firebaseapp.com",
@@ -23,10 +121,14 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    /* ================== LOGIN SIMPLES ================== */
-    const PASSWORD = "Wwx77ivh90V50!!!"; // apenas bloqueio visual
+    /* AUTH ANÓNIMO */
+    const auth = getAuth(app);
+    signInAnonymously(auth);
 
-    window.login = function () {
+    /* LOGIN VISUAL */
+    const PASSWORD = "Wwx77ivh90V50!!!";
+
+    window.login = () => {
       const pass = document.getElementById("password").value;
       if (pass === PASSWORD) {
         document.getElementById("login").classList.add("hidden");
@@ -37,33 +139,64 @@
       }
     };
 
-    /* ================== TEMA ================== */
-    window.toggleTheme = function () {
+    window.toggleTheme = () => {
       document.body.classList.toggle("dark");
     };
 
-    /* ================== NOTAS ================== */
-    window.addNote = async function () {
-      const textarea = document.getElementById("newNote");
-      const text = textarea.value.trim();
+    /* ADD NOTE */
+    window.addNote = async () => {
+      const text = newNote.value.trim();
       if (!text) return;
 
       await addDoc(collection(db, "notes"), {
-        text: text,
+        text,
         createdAt: new Date()
       });
 
-      textarea.value = "";
+      newNote.value = "";
       loadNotes();
     };
 
+    /* LOAD NOTES */
     async function loadNotes() {
-      const notesDiv = document.getElementById("notes");
-      notesDiv.innerHTML = "";
-
+      notes.innerHTML = "";
       const q = query(collection(db, "notes"), orderBy("createdAt", "desc"));
       const snap = await getDocs(q);
+      snap.forEach(d => render(d.id, d.data()));
+    }
 
+    /* RENDER NOTE */
+    function render(id, note) {
+      const div = document.createElement("div");
+      div.className = "note";
+      div.innerHTML = `
+        <div class="date">${note.createdAt.toDate().toLocaleString()}</div>
+        <div>${note.text}</div>
+        <button class="delete" onclick="deleteNote('${id}')">🗑 Excluir</button>
+      `;
+      notes.appendChild(div);
+    }
+
+    /* DELETE NOTE */
+    window.deleteNote = async (id) => {
+      if (!confirm("Excluir esta anotação?")) return;
+      await deleteDoc(doc(db, "notes", id));
+      loadNotes();
+    };
+
+    /* SEARCH */
+    search.addEventListener("input", async e => {
+      const term = e.target.value.toLowerCase();
+      notes.innerHTML = "";
+      const snap = await getDocs(collection(db, "notes"));
+      snap.forEach(d => {
+        const n = d.data();
+        if (n.text.toLowerCase().includes(term)) render(d.id, n);
+      });
+    });
+  </script>
+</body>
+</html>
       snap.forEach(doc => {
         const note = doc.data();
         render(note);
@@ -189,4 +322,5 @@
   </div>
 </body>
 </html>
+
 
