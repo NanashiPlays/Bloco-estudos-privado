@@ -5,10 +5,99 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bloco de Estudos Privado</title>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- Firebase (APENAS modular, versão moderna) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
+    /* ================== CONFIG FIREBASE ================== */
+    const firebaseConfig = {
+      apiKey: "AIzaSyBq_v_3jpcr3Gzk2QfuOiG4aiPkvnVKoDc",
+      authDomain: "bloco-estudos.firebaseapp.com",
+      projectId: "bloco-estudos",
+      storageBucket: "bloco-estudos.appspot.com",
+      messagingSenderId: "186002405584",
+      appId: "1:186002405584:web:e9672c174a3ac2b618c6d5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    /* ================== LOGIN SIMPLES ================== */
+    const PASSWORD = "Wwx77ivh90V50!!!"; // apenas bloqueio visual
+
+    window.login = function () {
+      const pass = document.getElementById("password").value;
+      if (pass === PASSWORD) {
+        document.getElementById("login").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
+        loadNotes();
+      } else {
+        alert("Senha incorreta");
+      }
+    };
+
+    /* ================== TEMA ================== */
+    window.toggleTheme = function () {
+      document.body.classList.toggle("dark");
+    };
+
+    /* ================== NOTAS ================== */
+    window.addNote = async function () {
+      const textarea = document.getElementById("newNote");
+      const text = textarea.value.trim();
+      if (!text) return;
+
+      await addDoc(collection(db, "notes"), {
+        text: text,
+        createdAt: new Date()
+      });
+
+      textarea.value = "";
+      loadNotes();
+    };
+
+    async function loadNotes() {
+      const notesDiv = document.getElementById("notes");
+      notesDiv.innerHTML = "";
+
+      const q = query(collection(db, "notes"), orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
+
+      snap.forEach(doc => {
+        const note = doc.data();
+        render(note);
+      });
+    }
+
+    function render(note) {
+      const notesDiv = document.getElementById("notes");
+      const div = document.createElement("div");
+      div.className = "note";
+      div.innerHTML = `
+        <div class="date">${note.createdAt.toDate().toLocaleString()}</div>
+        <div>${note.text}</div>
+      `;
+      notesDiv.appendChild(div);
+    }
+
+    /* ================== PESQUISA ================== */
+    window.onload = () => {
+      document.getElementById("search").addEventListener("input", async e => {
+        const term = e.target.value.toLowerCase();
+        const notesDiv = document.getElementById("notes");
+        notesDiv.innerHTML = "";
+
+        const snap = await getDocs(collection(db, "notes"));
+        snap.forEach(doc => {
+          const n = doc.data();
+          if (n.text.toLowerCase().includes(term)) render(n);
+        });
+      });
+    };
+  </script>
+
+  <!-- ================== ESTILO (CSS DENTRO DO HTML) ================== -->
   <style>
     :root {
       --bg: #f8fafc;
@@ -16,6 +105,7 @@
       --text: #020617;
       --primary: #2563eb;
     }
+
     body.dark {
       --bg: #020617;
       --card: #020617;
@@ -23,20 +113,23 @@
       --primary: #38bdf8;
     }
 
-
-    <body>
-    {
+    body {
       margin: 0;
       font-family: system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       padding: 12px;
     }
+
     .container {
       max-width: 600px;
       margin: auto;
     }
-    h1 { text-align: center; }
+
+    h1 {
+      text-align: center;
+    }
+
     input, textarea, button {
       width: 100%;
       margin-top: 10px;
@@ -45,12 +138,17 @@
       border: none;
       font-size: 16px;
     }
-    textarea { min-height: 120px; }
+
+    textarea {
+      min-height: 120px;
+    }
+
     button {
       background: var(--primary);
       color: white;
       cursor: pointer;
     }
+
     .note {
       background: var(--card);
       padding: 12px;
@@ -58,156 +156,37 @@
       margin-top: 10px;
       box-shadow: 0 4px 10px rgba(0,0,0,.2);
     }
-    .date { font-size: 12px; opacity: .7; }
-    .hidden { display: none; }
+
+    .date {
+      font-size: 12px;
+      opacity: .7;
+    }
+
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
+
 <body>
-<div class="container">
-  <h1>📘 Meus Estudos</h1>
+  <div class="container">
+    <h1>📘 Meus Estudos</h1>
 
-  <!-- Login -->
-  <div id="login">
-    <input type="password" id="password" placeholder="Senha" />
-    <button onclick="login()">Entrar</button>
+    <!-- LOGIN -->
+    <div id="login">
+      <input type="password" id="password" placeholder="Senha" />
+      <button onclick="login()">Entrar</button>
+    </div>
+
+    <!-- APP -->
+    <div id="app" class="hidden">
+      <button onclick="toggleTheme()">🌙 / ☀️</button>
+      <input id="search" placeholder="Pesquisar notas..." />
+      <textarea id="newNote" placeholder="Nova anotação..."></textarea>
+      <button onclick="addNote()">Salvar anotação</button>
+      <div id="notes"></div>
+    </div>
   </div>
-
-  <!-- App -->
-  <div id="app" class="hidden">
-    <button onclick="toggleTheme()">🌙 / ☀️</button>
-    <input id="search" placeholder="Pesquisar notas..." />
-    <textarea id="newNote" placeholder="Nova anotação..."></textarea>
-    <button onclick="addNote()">Salvar anotação</button>
-    <div id="notes"></div>
-  </div>
-</div>
-
-<script>
-  const PASSWORD = "Wwx77ivh90V50!!!"; // MUDA ISTO
-
-  function login() {
-  const pass = document.getElementById("password").value;
-  const loginDiv = document.getElementById("login");
-  const appDiv = document.getElementById("app");
-
-  if (pass === PASSWORD) {
-    loginDiv.classList.add("hidden");
-    appDiv.classList.remove("hidden");
-    loadNotes();
-  } else {
-    alert("Senha incorreta");
-  }
-    
-}
-
-  function toggleTheme() {
-    document.body.classList.toggle('dark');
-  }
-
-  /* Firebase config (coloca os teus dados aqui) */
-  const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
-    authDomain: "SEU_DOMINIO",
-    projectId: "SEU_PROJECT_ID",
-  };
-
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
-
-  async function addNote() {
-    if (!newNote.value.trim()) return;
-    await db.collection('notes').add({
-      text: newNote.value,
-      date: new Date().toLocaleString()
-    });
-    newNote.value = '';
-    loadNotes();
-  }
-
-  async function loadNotes() {
-    notes.innerHTML = '';
-    const snap = await db.collection('notes').orderBy('date','desc').get();
-    snap.forEach(doc => render(doc.data()));
-  }
-
-  function render(note) {
-    const div = document.createElement('div');
-    div.className = 'note';
-    div.innerHTML = `<div class="date">${note.date}</div><div>${note.text}</div>`;
-    notes.appendChild(div);
-  }
-
-  search.oninput = async () => {
-    notes.innerHTML = '';
-    const snap = await db.collection('notes').get();
-    snap.forEach(doc => {
-      const n = doc.data();
-      if (n.text.toLowerCase().includes(search.value.toLowerCase())) render(n);
-    });
-  };
-</script>
-
-  
-  <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyBq_v_3jpcr3Gzk2QfuOiG4aiPkvnVKoDc",
-    authDomain: "bloco-estudos.firebaseapp.com",
-    projectId: "bloco-estudos",
-    storageBucket: "bloco-estudos.firebasestorage.app",
-    messagingSenderId: "186002405584",
-    appId: "1:186002405584:web:e9672c174a3ac2b618c6d5",
-    measurementId: "G-GQMTXQ35BS"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-
-async function addNote() {
-  const text = document.getElementById("newNote").value.trim();
-  if (text === "") return;
-
-  await addDoc(collection(db, "notas"), {
-    texto: text,
-    data: new Date().toISOString()
-  });
-
-  document.getElementById("newNote").value = "";
-  loadNotes();
-}
-
-
-async function loadNotes() {
-  const notesDiv = document.getElementById("notes");
-  notesDiv.innerHTML = "";
-
-  const q = query(collection(db, "notas"), orderBy("data", "desc"));
-  const snapshot = await getDocs(q);
-
-  snapshot.forEach(doc => {
-    const note = doc.data();
-    const div = document.createElement("div");
-    div.className = "note";
-    div.innerHTML = `
-      <div class="date">${new Date(note.data).toLocaleString()}</div>
-      <div>${note.texto}</div>
-    `;
-    notesDiv.appendChild(div);
-  });
-}
-</script>
 </body>
 </html>
-
-
-
-
 
