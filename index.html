@@ -1,8 +1,10 @@
-<!DOCTYPE html><html lang="pt">
+<!DOCTYPE html>
+<html lang="pt">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bloco de Estudos</title>  <style>
+  <title>Bloco de Estudos</title>
+  <style>
     :root {
       --bg: #0f172a;
       --card: #1e293b;
@@ -55,25 +57,33 @@
 
     .date { font-size: 12px; opacity: .7; }
     .delete { background: transparent; color: var(--danger); margin-top: 8px; }
-  </style></head>
-<body><div class="container">
+  </style>
+</head>
+<body>
+<div class="container">
   <header>
     <h1>📘 Meus Estudos</h1>
     <p>Notas privadas com login seguro</p>
-  </header>  <!-- LOGIN -->  <div id="login">
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Senha" />
-    <button id="loginBtn">Entrar / Criar conta</button>
-  </div>  <!-- APP -->  <div id="app" class="hidden">
+  </header>
+
+  <!-- LOGIN -->
+  <div id="login">
+    <input type="password" id="password" placeholder="Senha de acesso" />
+    <button id="loginBtn">Entrar</button>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="hidden">
     <button id="logoutBtn">Sair</button>
     <textarea id="newNote" placeholder="Nova anotação..."></textarea>
     <button id="saveBtn">Salvar anotação</button>
     <div id="notes"></div>
   </div>
-</div><script type="module">
+</div>
+
+<script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyBq_v_3jpcr3Gzk2QfuOiG4aiPkvnVKoDc",
@@ -82,35 +92,36 @@
   };
 
   const appFirebase = initializeApp(firebaseConfig);
-  const auth = getAuth(appFirebase);
   const db = getFirestore(appFirebase);
 
   const loginDiv = document.getElementById("login");
   const appDiv = document.getElementById("app");
+  const passwordInput = document.getElementById("password");
 
-  document.getElementById("loginBtn").onclick = async () => {
-    const email = email.value;
-    const password = password.value;
+  const PASSWORD = "Wwx77ivh90V50!!!"; // Defina aqui a senha de acesso
 
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch {
-      await createUserWithEmailAndPassword(auth, email, password);
+  // ID fictício do usuário anônimo
+  let userId = null;
+
+  document.getElementById("loginBtn").onclick = () => {
+    const pass = passwordInput.value;
+    if (pass === PASSWORD) {
+      userId = "anon_user"; // ID fixo para todas as notas
+      loginDiv.classList.add("hidden");
+      appDiv.classList.remove("hidden");
+      loadNotes();
+    } else {
+      alert("Senha incorreta!");
     }
   };
 
-  document.getElementById("logoutBtn").onclick = () => signOut(auth);
-
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      loginDiv.classList.add("hidden");
-      appDiv.classList.remove("hidden");
-      loadNotes(user.uid);
-    } else {
-      loginDiv.classList.remove("hidden");
-      appDiv.classList.add("hidden");
-    }
-  });
+  document.getElementById("logoutBtn").onclick = () => {
+    userId = null;
+    loginDiv.classList.remove("hidden");
+    appDiv.classList.add("hidden");
+    passwordInput.value = "";
+    notes.innerHTML = "";
+  };
 
   document.getElementById("saveBtn").onclick = async () => {
     const text = newNote.value.trim();
@@ -118,21 +129,24 @@
 
     await addDoc(collection(db, "notes"), {
       text,
-      uid: auth.currentUser.uid,
+      uid: userId,
       date: new Date().toISOString()
     });
 
     newNote.value = "";
-    loadNotes(auth.currentUser.uid);
+    loadNotes();
   };
 
-  async function loadNotes(uid) {
+  async function loadNotes() {
     notes.innerHTML = "";
-    const q = query(collection(db, "notes"), where("uid", "==", uid));
-    const snap = await getDocs(q);
+    if (!userId) return;
+
+    const snap = await getDocs(collection(db, "notes"));
 
     snap.forEach(d => {
       const n = d.data();
+      if (n.uid !== userId) return; // Só mostra notas do usuário anônimo atual
+
       const div = document.createElement("div");
       div.className = "note";
       div.innerHTML = `
@@ -144,12 +158,13 @@
       div.querySelector(".delete").onclick = async () => {
         if (confirm("Excluir esta nota?")) {
           await deleteDoc(doc(db, "notes", d.id));
-          loadNotes(uid);
+          loadNotes();
         }
       };
 
       notes.appendChild(div);
     });
   }
-</script></body>
+</script>
+</body>
 </html>
