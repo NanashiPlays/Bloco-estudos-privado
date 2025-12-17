@@ -83,13 +83,18 @@
   const PASSWORD = "Wwx77ivh90V50!!!"; // MUDA ISTO
 
   function login() {
-    if (password.value === PASSWORD) {
-      loginDiv.style.display = 'none';
-      app.style.display = 'block';
-      loadNotes();
-    } else alert('Senha errada');
-  }
+  const pass = document.getElementById("password").value;
+  const loginDiv = document.getElementById("login");
+  const appDiv = document.getElementById("app");
 
+  if (pass === PASSWORD) {
+    loginDiv.classList.add("hidden");
+    appDiv.classList.remove("hidden");
+    loadNotes();
+  } else {
+    alert("Senha incorreta");
+  }
+}
   function toggleTheme() {
     document.body.classList.toggle('dark');
   }
@@ -138,4 +143,5 @@
 </script>
 </body>
 </html>
+
 
