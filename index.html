@@ -1,21 +1,40 @@
-
-<!DOCTYPE html>
-<html lang="pt">
+<!DOCTYPE html><html lang="pt">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meus Estudos</title>
+  <title>Bloco de Estudos Privado</title>  <!-- ================== ESTILO ================== -->  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #020617;
+      --primary: #2563eb;
+      --danger: #dc2626;
+    }
 
-  <style>
+    body.dark {
+      --bg: #020617;
+      --card: #020617;
+      --text: #e5e7eb;
+      --primary: #38bdf8;
+    }
+
     body {
+      margin: 0;
       font-family: system-ui, sans-serif;
-      background: #f8fafc;
+      background: var(--bg);
+      color: var(--text);
       padding: 12px;
     }
+
     .container {
       max-width: 600px;
       margin: auto;
     }
+
+    h1 {
+      text-align: center;
+    }
+
     input, textarea, button {
       width: 100%;
       margin-top: 10px;
@@ -24,102 +43,145 @@
       border: none;
       font-size: 16px;
     }
-    button {
-      background: #2563eb;
-      color: white;
+
+    textarea {
+      min-height: 120px;
     }
+
+    button {
+      background: var(--primary);
+      color: white;
+      cursor: pointer;
+    }
+
     .note {
-      background: white;
+      background: var(--card);
       padding: 12px;
       border-radius: 10px;
       margin-top: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,.2);
     }
+
+    .date {
+      font-size: 12px;
+      opacity: .7;
+    }
+
     .delete {
-      background: #dc2626;
+      background: var(--danger);
       margin-top: 8px;
     }
+
     .hidden {
       display: none;
     }
-  </style>
-</head>
-
-<body>
+  </style></head><body>
   <div class="container">
-    <h1>📘 Meus Estudos</h1>
+    <h1>📘 Meus Estudos</h1><!-- LOGIN VISUAL -->
+<div id="login">
+  <input type="password" id="password" placeholder="Senha" />
+  <button onclick="login()">Entrar</button>
+</div>
 
-    <div id="login">
-      <input type="password" id="password" placeholder="Senha" />
-      <button onclick="login()">Entrar</button>
-    </div>
+<!-- APP -->
+<div id="app" class="hidden">
+  <button onclick="toggleTheme()">🌙 / ☀️</button>
+  <input id="search" placeholder="Pesquisar notas..." />
+  <textarea id="newNote" placeholder="Nova anotação..."></textarea>
+  <button onclick="addNote()">Salvar anotação</button>
+  <div id="notes"></div>
+</div>
 
-    <div id="app" class="hidden">
-      <textarea id="newNote" placeholder="Nova anotação..."></textarea>
-      <button onclick="addNote()">Salvar anotação</button>
-      <div id="notes"></div>
-    </div>
-  </div>
-
-  <!-- ⚠️ TODO O JAVASCRIPT FICA AQUI DENTRO -->
-  <script type="module">
+  </div>  <!-- ================== SCRIPT ================== -->  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc } 
-      from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-    import { getAuth, signInAnonymously } 
-      from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
 
+    /* FIREBASE CONFIG */
     const firebaseConfig = {
-      apiKey: "SUA_API_KEY",
-      authDomain: "SEU_DOMINIO",
-      projectId: "SEU_PROJECT_ID"
+      apiKey: "AIzaSyBq_v_3jpcr3Gzk2QfuOiG4aiPkvnVKoDc",
+      authDomain: "bloco-estudos.firebaseapp.com",
+      projectId: "bloco-estudos",
+      storageBucket: "bloco-estudos.appspot.com",
+      messagingSenderId: "186002405584",
+      appId: "1:186002405584:web:e9672c174a3ac2b618c6d5"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    signInAnonymously(getAuth(app));
+    /* AUTH ANÓNIMO */
+    const auth = getAuth(app);
+    signInAnonymously(auth);
 
+    /* LOGIN VISUAL */
     const PASSWORD = "Wwx77ivh90V50!!!";
 
     window.login = () => {
-      if (password.value === PASSWORD) {
-        login.classList.add("hidden");
-        appDiv.classList.remove("hidden");
+      const pass = document.getElementById("password").value;
+      if (pass === PASSWORD) {
+        document.getElementById("login").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
         loadNotes();
-      } else alert("Senha errada");
+      } else {
+        alert("Senha incorreta");
+      }
     };
 
-    const appDiv = document.getElementById("app");
-    const notesDiv = document.getElementById("notes");
+    window.toggleTheme = () => {
+      document.body.classList.toggle("dark");
+    };
 
+    /* ADD NOTE */
     window.addNote = async () => {
-      if (!newNote.value.trim()) return;
-      await addDoc(collection(db, "notes"), { text: newNote.value });
+      const text = newNote.value.trim();
+      if (!text) return;
+
+      await addDoc(collection(db, "notes"), {
+        text,
+        createdAt: new Date()
+      });
+
       newNote.value = "";
       loadNotes();
     };
 
+    /* LOAD NOTES */
     async function loadNotes() {
-      notesDiv.innerHTML = "";
-      const snap = await getDocs(collection(db, "notes"));
+      notes.innerHTML = "";
+      const q = query(collection(db, "notes"), orderBy("createdAt", "desc"));
+      const snap = await getDocs(q);
       snap.forEach(d => render(d.id, d.data()));
     }
 
+    /* RENDER NOTE */
     function render(id, note) {
       const div = document.createElement("div");
       div.className = "note";
       div.innerHTML = `
+        <div class="date">${note.createdAt.toDate().toLocaleString()}</div>
         <div>${note.text}</div>
-        <button class="delete" onclick="deleteNote('${id}')">Excluir</button>
+        <button class="delete" onclick="deleteNote('${id}')">🗑 Excluir</button>
       `;
-      notesDiv.appendChild(div);
+      notes.appendChild(div);
     }
 
-    window.deleteNote = async id => {
+    /* DELETE NOTE */
+    window.deleteNote = async (id) => {
+      if (!confirm("Excluir esta anotação?")) return;
       await deleteDoc(doc(db, "notes", id));
       loadNotes();
     };
-  </script>
-</body>
-</html>
 
+    /* SEARCH */
+    search.addEventListener("input", async e => {
+      const term = e.target.value.toLowerCase();
+      notes.innerHTML = "";
+      const snap = await getDocs(collection(db, "notes"));
+      snap.forEach(d => {
+        const n = d.data();
+        if (n.text.toLowerCase().includes(term)) render(d.id, n);
+      });
+    });
+  </script></body>
+</html>
