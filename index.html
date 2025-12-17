@@ -170,11 +170,43 @@
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
+
+async function addNote() {
+  const text = document.getElementById("newNote").value.trim();
+  if (text === "") return;
+
+  await addDoc(collection(db, "notas"), {
+    texto: text,
+    data: new Date().toISOString()
+  });
+
+  document.getElementById("newNote").value = "";
+  loadNotes();
+}
+
+
+async function loadNotes() {
+  const notesDiv = document.getElementById("notes");
+  notesDiv.innerHTML = "";
+
+  const q = query(collection(db, "notas"), orderBy("data", "desc"));
+  const snapshot = await getDocs(q);
+
+  snapshot.forEach(doc => {
+    const note = doc.data();
+    const div = document.createElement("div");
+    div.className = "note";
+    div.innerHTML = `
+      <div class="date">${new Date(note.data).toLocaleString()}</div>
+      <div>${note.texto}</div>
+    `;
+    notesDiv.appendChild(div);
+  });
+}
 </script>
-  
-  
 </body>
 </html>
+
 
 
 
