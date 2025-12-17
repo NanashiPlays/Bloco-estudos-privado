@@ -1,23 +1,14 @@
-<!DOCTYPE html>
-<html lang="pt">
+<!DOCTYPE html><html lang="pt">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bloco de Estudos Privado</title>
-  <style>
+  <title>Bloco de Estudos</title>  <style>
     :root {
-      --bg: #f8fafc;
-      --card: #ffffff;
-      --text: #020617;
-      --primary: #2563eb;
-      --danger: #dc2626;
-    }
-
-    body.dark {
-      --bg: #020617;
-      --card: #020617;
+      --bg: #0f172a;
+      --card: #1e293b;
       --text: #e5e7eb;
-      --primary: #38bdf8;
+      --primary: #8b5cf6;
+      --danger: #ef4444;
     }
 
     body {
@@ -25,22 +16,37 @@
       font-family: system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding: 12px;
+      padding: 16px;
     }
 
-    .container { max-width: 600px; margin: auto; }
-    h1 { text-align: center; }
+    .container {
+      max-width: 600px;
+      margin: auto;
+    }
 
-    input, textarea, select, button {
+    .hidden { display: none; }
+
+    header {
+      background: linear-gradient(135deg, #7c3aed, #4c1d95);
+      padding: 24px;
+      border-radius: 18px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input, textarea, button {
       width: 100%;
       margin-top: 10px;
-      padding: 12px;
-      border-radius: 10px;
+      padding: 14px;
+      border-radius: 14px;
       border: none;
-      font-size: 16px;
+      font-size: 15px;
     }
 
-    textarea { min-height: 120px; }
+    input, textarea {
+      background: #020617;
+      color: var(--text);
+    }
 
     button {
       background: var(--primary);
@@ -50,166 +56,100 @@
 
     .note {
       background: var(--card);
-      padding: 12px;
-      border-radius: 10px;
-      margin-top: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,.2);
+      padding: 14px;
+      border-radius: 16px;
+      margin-top: 14px;
     }
 
-    .date { font-size: 12px; opacity: .7; }
-    .category { font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+    .date {
+      font-size: 12px;
+      opacity: .7;
+    }
 
     .delete {
-      background: var(--danger);
+      background: transparent;
+      color: var(--danger);
       margin-top: 8px;
     }
-
-    .hidden { display: none; }
-  </style>
-</head>
-<body>
-<div class="container">
-  <h1>📘 Meus Estudos</h1>
-
-  <!-- LOGIN -->
-  <div id="login">
+  </style></head>
+<body><div class="container">  <header>
+    <h1>📘 Meus Estudos</h1>
+    <p>Notas privadas e organizadas</p>
+  </header>  <!-- LOGIN -->  <div id="login">
     <input type="password" id="password" placeholder="Senha" />
-    <button onclick="login()">Entrar</button>
-  </div>
-
-  <!-- APP -->
-  <div id="app" class="hidden">
-    <button onclick="toggleTheme()">🌙 / ☀️</button>
-
-    <input id="search" placeholder="Pesquisar notas..." />
-
-    <!-- CATEGORIA -->
-    <select id="category">
-      <option value="Geral">Geral</option>
-      <option value="Matemática">Matemática</option>
-      <option value="Português">Português</option>
-      <option value="Ciências">Ciências</option>
-      <option value="Outros">Outros</option>
-    </select>
-
+    <button id="loginBtn">Entrar</button>
+  </div>  <!-- APP -->  <div id="app" class="hidden">
     <textarea id="newNote" placeholder="Nova anotação..."></textarea>
-    <button onclick="addNote()">Salvar anotação</button>
-
-    <!-- FILTRO -->
-    <select id="filter" onchange="loadNotes()">
-      <option value="">Todas as categorias</option>
-      <option value="Geral">Geral</option>
-      <option value="Matemática">Matemática</option>
-      <option value="Português">Português</option>
-      <option value="Ciências">Ciências</option>
-      <option value="Outros">Outros</option>
-    </select>
-
+    <button id="saveBtn">Salvar anotação</button>
     <div id="notes"></div>
-  </div>
-</div>
-
-<script type="module">
+  </div></div><script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+
+  const PASSWORD = "Wwx77ivh90V50!!!"; // MUDA ISTO
 
   const firebaseConfig = {
     apiKey: "AIzaSyBq_v_3jpcr3Gzk2QfuOiG4aiPkvnVKoDc",
     authDomain: "bloco-estudos.firebaseapp.com",
     projectId: "bloco-estudos",
-    storageBucket: "bloco-estudos.appspot.com",
-    messagingSenderId: "186002405584",
-    appId: "1:186002405584:web:e9672c174a3ac2b618c6d5"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  const appFirebase = initializeApp(firebaseConfig);
+  const db = getFirestore(appFirebase);
 
-  const auth = getAuth(app);
-  signInAnonymously(auth);
+  const loginDiv = document.getElementById("login");
+  const appDiv = document.getElementById("app");
+  const loginBtn = document.getElementById("loginBtn");
 
-  const PASSWORD = "Wwx77ivh90V50!!!";
+  loginBtn.addEventListener("click", () => {
+    const pass = document.getElementById("password").value;
 
-  window.login = () => {
-    if (password.value === PASSWORD) {
-      login.classList.add("hidden");
+    if (pass === PASSWORD) {
+      loginDiv.classList.add("hidden");
       appDiv.classList.remove("hidden");
       loadNotes();
-    } else alert("Senha incorreta");
-  };
+    } else {
+      alert("Senha incorreta");
+    }
+  });
 
-  window.toggleTheme = () => document.body.classList.toggle("dark");
-
-  window.addNote = async () => {
-    if (!newNote.value.trim()) return;
+  const saveBtn = document.getElementById("saveBtn");
+  saveBtn.addEventListener("click", async () => {
+    const text = newNote.value.trim();
+    if (!text) return;
 
     await addDoc(collection(db, "notes"), {
-      text: newNote.value,
-      category: category.value,
-      createdAt: new Date()
+      text,
+      date: new Date().toISOString()
     });
 
     newNote.value = "";
     loadNotes();
-  };
+  });
 
   async function loadNotes() {
     notes.innerHTML = "";
-    const cat = filter.value;
-    const q = query(collection(db, "notes"), orderBy("createdAt", "desc"));
-    const snap = await getDocs(q);
-
-    snap.forEach(d => {
-      const n = d.data();
-      if (!cat || n.category === cat) render(d.id, n);
-    });
-  }
-
-  function render(id, note) {
-    const div = document.createElement("div");
-    div.className = "note";
-    div.innerHTML = `
-      <div class="category">📂 ${note.category}</div>
-      <div class="date">${note.createdAt.toDate().toLocaleString()}</div>
-      <div id="text-${id}">${note.text}</div>
-      <button onclick="editNote('${id}', '${note.text.replace(/'/g, "&#39;")}', '${note.category}')">✏️ Editar</button>
-      <button class="delete" onclick="deleteNote('${id}')">🗑 Excluir</button>
-    `;
-    notes.appendChild(div);
-  }
-
-  window.deleteNote = async id => {
-    if (!confirm("Excluir esta anotação?")) return;
-    await deleteDoc(doc(db, "notes", id));
-    loadNotes();
-  };
-
-  window.editNote = async (id, oldText, oldCategory) => {
-    const newText = prompt("Editar anotação:", oldText);
-    if (newText === null) return;
-
-    const newCategory = prompt("Editar categoria:", oldCategory) || oldCategory;
-
-    await updateDoc(doc(db, "notes", id), {
-      text: newText,
-      category: newCategory
-    });
-
-    loadNotes();
-  };
-
-  search.addEventListener("input", async e => {
-    const term = e.target.value.toLowerCase();
-    notes.innerHTML = "";
     const snap = await getDocs(collection(db, "notes"));
+
     snap.forEach(d => {
       const n = d.data();
-      if (n.text.toLowerCase().includes(term)) render(d.id, n);
-    });
-  });
+      const div = document.createElement("div");
+      div.className = "note";
+      div.innerHTML = `
+        <div class="date">${new Date(n.date).toLocaleString()}</div>
+        <div>${n.text}</div>
+        <button class="delete">🗑 Excluir</button>
+      `;
 
-  const appDiv = document.getElementById("app");
-</script>
-</body>
+      div.querySelector(".delete").onclick = async () => {
+        if (confirm("Excluir esta nota?")) {
+          await deleteDoc(doc(db, "notes", d.id));
+          loadNotes();
+        }
+      };
+
+      notes.appendChild(div);
+    });
+  }
+</script></body>
 </html>
