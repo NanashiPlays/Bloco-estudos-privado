@@ -1,123 +1,155 @@
-<!DOCTYPE html>
-<html lang="pt">
+<!DOCTYPE html><html lang="pt">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Meus Estudos</title>
+  <title>Bloco de Estudos</title>  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #e5e7eb;
+      --primary: #8b5cf6;
+      --danger: #ef4444;
+    }
 
-  <style>
     body {
+      margin: 0;
       font-family: system-ui, sans-serif;
-      background: #f8fafc;
-      padding: 12px;
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
     }
-    .container {
-      max-width: 600px;
-      margin: auto;
+
+    .container { max-width: 600px; margin: auto; }
+    .hidden { display: none; }
+
+    header {
+      background: linear-gradient(135deg, #7c3aed, #4c1d95);
+      padding: 24px;
+      border-radius: 18px;
+      text-align: center;
+      margin-bottom: 20px;
     }
+
     input, textarea, button {
       width: 100%;
       margin-top: 10px;
-      padding: 12px;
-      border-radius: 10px;
+      padding: 14px;
+      border-radius: 14px;
       border: none;
-      font-size: 16px;
+      font-size: 15px;
     }
-    button {
-      background: #2563eb;
-      color: white;
+
+    input, textarea {
+      background: #020617;
+      color: var(--text);
     }
+
+    button { background: var(--primary); color: white; cursor: pointer; }
+
     .note {
-      background: white;
-      padding: 12px;
-      border-radius: 10px;
-      margin-top: 10px;
+      background: var(--card);
+      padding: 14px;
+      border-radius: 16px;
+      margin-top: 14px;
     }
-    .delete {
-      background: #dc2626;
-      margin-top: 8px;
-    }
-    .hidden {
-      display: none;
-    }
-  </style>
-</head>
 
-<body>
-  <div class="container">
+    .date { font-size: 12px; opacity: .7; }
+    .delete { background: transparent; color: var(--danger); margin-top: 8px; }
+  </style></head>
+<body><div class="container">
+  <header>
     <h1>📘 Meus Estudos</h1>
-
-    <div id="login">
-      <input type="password" id="password" placeholder="Senha" />
-      <button onclick="login()">Entrar</button>
-    </div>
-
-    <div id="app" class="hidden">
-      <textarea id="newNote" placeholder="Nova anotação..."></textarea>
-      <button onclick="addNote()">Salvar anotação</button>
-      <div id="notes"></div>
-    </div>
+    <p>Notas privadas com login seguro</p>
+  </header>  <!-- LOGIN -->  <div id="login">
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Senha" />
+    <button id="loginBtn">Entrar / Criar conta</button>
+  </div>  <!-- APP -->  <div id="app" class="hidden">
+    <button id="logoutBtn">Sair</button>
+    <textarea id="newNote" placeholder="Nova anotação..."></textarea>
+    <button id="saveBtn">Salvar anotação</button>
+    <div id="notes"></div>
   </div>
+</div><script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-  <!-- ⚠️ TODO O JAVASCRIPT FICA AQUI DENTRO -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc } 
-      from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
-    import { getAuth, signInAnonymously } 
-      from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyBq_v_3jpcr3Gzk2QfuOiG4aiPkvnVKoDc",
+    authDomain: "bloco-estudos.firebaseapp.com",
+    projectId: "bloco-estudos",
+  };
 
-    const firebaseConfig = {
-      apiKey: "SUA_API_KEY",
-      authDomain: "SEU_DOMINIO",
-      projectId: "SEU_PROJECT_ID"
-    };
+  const appFirebase = initializeApp(firebaseConfig);
+  const auth = getAuth(appFirebase);
+  const db = getFirestore(appFirebase);
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  const loginDiv = document.getElementById("login");
+  const appDiv = document.getElementById("app");
 
-    signInAnonymously(getAuth(app));
+  document.getElementById("loginBtn").onclick = async () => {
+    const email = email.value;
+    const password = password.value;
 
-    const PASSWORD = "1234";
-
-    window.login = () => {
-      if (password.value === PASSWORD) {
-        login.classList.add("hidden");
-        appDiv.classList.remove("hidden");
-        loadNotes();
-      } else alert("Senha errada");
-    };
-
-    const appDiv = document.getElementById("app");
-    const notesDiv = document.getElementById("notes");
-
-    window.addNote = async () => {
-      if (!newNote.value.trim()) return;
-      await addDoc(collection(db, "notes"), { text: newNote.value });
-      newNote.value = "";
-      loadNotes();
-    };
-
-    async function loadNotes() {
-      notesDiv.innerHTML = "";
-      const snap = await getDocs(collection(db, "notes"));
-      snap.forEach(d => render(d.id, d.data()));
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch {
+      await createUserWithEmailAndPassword(auth, email, password);
     }
+  };
 
-    function render(id, note) {
+  document.getElementById("logoutBtn").onclick = () => signOut(auth);
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      loginDiv.classList.add("hidden");
+      appDiv.classList.remove("hidden");
+      loadNotes(user.uid);
+    } else {
+      loginDiv.classList.remove("hidden");
+      appDiv.classList.add("hidden");
+    }
+  });
+
+  document.getElementById("saveBtn").onclick = async () => {
+    const text = newNote.value.trim();
+    if (!text) return;
+
+    await addDoc(collection(db, "notes"), {
+      text,
+      uid: auth.currentUser.uid,
+      date: new Date().toISOString()
+    });
+
+    newNote.value = "";
+    loadNotes(auth.currentUser.uid);
+  };
+
+  async function loadNotes(uid) {
+    notes.innerHTML = "";
+    const q = query(collection(db, "notes"), where("uid", "==", uid));
+    const snap = await getDocs(q);
+
+    snap.forEach(d => {
+      const n = d.data();
       const div = document.createElement("div");
       div.className = "note";
       div.innerHTML = `
-        <div>${note.text}</div>
-        <button class="delete" onclick="deleteNote('${id}')">Excluir</button>
+        <div class="date">${new Date(n.date).toLocaleString()}</div>
+        <div>${n.text}</div>
+        <button class="delete">🗑 Excluir</button>
       `;
-      notesDiv.appendChild(div);
-    }
 
-    window.deleteNote = async id => {
-      await deleteDoc(doc(db, "notes", id));
-      loadNotes();
-    };
-  </script>
-</body>
+      div.querySelector(".delete").onclick = async () => {
+        if (confirm("Excluir esta nota?")) {
+          await deleteDoc(doc(db, "notes", d.id));
+          loadNotes(uid);
+        }
+      };
+
+      notes.appendChild(div);
+    });
+  }
+</script></body>
 </html>
