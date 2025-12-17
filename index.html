@@ -1,63 +1,61 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bloco de Estudos</title>
-  <style>
-    :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --text: #e5e7eb;
-      --primary: #8b5cf6;
-      --danger: #ef4444;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bloco de Estudos</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #e5e7eb;
+    --primary: #8b5cf6;
+    --danger: #ef4444;
+  }
 
-    body {
-      margin: 0;
-      font-family: system-ui, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      padding: 16px;
-    }
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+  }
 
-    .container { max-width: 600px; margin: auto; }
-    .hidden { display: none; }
+  .container { max-width: 600px; margin: auto; }
+  .hidden { display: none; }
 
-    header {
-      background: linear-gradient(135deg, #7c3aed, #4c1d95);
-      padding: 24px;
-      border-radius: 18px;
-      text-align: center;
-      margin-bottom: 20px;
-    }
+  header {
+    background: linear-gradient(135deg, #7c3aed, #4c1d95);
+    padding: 24px;
+    border-radius: 18px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
 
-    input, textarea, button {
-      width: 100%;
-      margin-top: 10px;
-      padding: 14px;
-      border-radius: 14px;
-      border: none;
-      font-size: 15px;
-    }
+  input, textarea, button {
+    width: 100%;
+    margin-top: 10px;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    font-size: 15px;
+  }
 
-    input, textarea {
-      background: #020617;
-      color: var(--text);
-    }
+  input, textarea { background: #020617; color: var(--text); }
+  button { background: var(--primary); color: white; cursor: pointer; }
 
-    button { background: var(--primary); color: white; cursor: pointer; }
+  .note {
+    background: var(--card);
+    padding: 14px;
+    border-radius: 16px;
+    margin-top: 14px;
+  }
 
-    .note {
-      background: var(--card);
-      padding: 14px;
-      border-radius: 16px;
-      margin-top: 14px;
-    }
-
-    .date { font-size: 12px; opacity: .7; }
-    .delete { background: transparent; color: var(--danger); margin-top: 8px; }
-  </style>
+  .date { font-size: 12px; opacity: .7; }
+  .delete { background: transparent; color: var(--danger); margin-top: 8px; }
+  .edit { background: transparent; color: var(--primary); margin-top: 8px; margin-right: 5px; }
+  .saveEdit, .cancelEdit { margin-top: 5px; width: 48%; display: inline-block; }
+</style>
 </head>
 <body>
 <div class="container">
@@ -66,9 +64,9 @@
     <p>Notas privadas com login seguro</p>
   </header>
 
-  <!-- LOGIN -->
+  <!-- LOGIN ANÔNIMO -->
   <div id="login">
-    <input type="password" id="password" placeholder="Senha de acesso" />
+    <input type="password" id="password" placeholder="Digite a senha" />
     <button id="loginBtn">Entrar</button>
   </div>
 
@@ -82,89 +80,121 @@
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBq_v_3jpcr3Gzk2QfuOiG4aiPkvnVKoDc",
-    authDomain: "bloco-estudos.firebaseapp.com",
-    projectId: "bloco-estudos",
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyBq_v_3jpcr3Gzk2QfuOiG4aiPkvnVKoDc",
+  authDomain: "bloco-estudos.firebaseapp.com",
+  projectId: "bloco-estudos",
+};
 
-  const appFirebase = initializeApp(firebaseConfig);
-  const db = getFirestore(appFirebase);
+const appFirebase = initializeApp(firebaseConfig);
+const db = getFirestore(appFirebase);
 
-  const loginDiv = document.getElementById("login");
-  const appDiv = document.getElementById("app");
-  const passwordInput = document.getElementById("password");
+const loginDiv = document.getElementById("login");
+const appDiv = document.getElementById("app");
+const notes = document.getElementById("notes");
+const newNote = document.getElementById("newNote");
+const passwordInput = document.getElementById("password");
 
-  const PASSWORD = "Wwx77ivh90V50!!!"; // Defina aqui a senha de acesso
+const PASSWORD = "Wwx77ivh90V50!!!"; // Defina aqui sua senha de acesso
+let userId = null;       // ID do usuário anônimo
 
-  // ID fictício do usuário anônimo
-  let userId = null;
-
-  document.getElementById("loginBtn").onclick = () => {
-    const pass = passwordInput.value;
-    if (pass === PASSWORD) {
-      userId = "anon_user"; // ID fixo para todas as notas
-      loginDiv.classList.add("hidden");
-      appDiv.classList.remove("hidden");
-      loadNotes();
-    } else {
-      alert("Senha incorreta!");
-    }
-  };
-
-  document.getElementById("logoutBtn").onclick = () => {
-    userId = null;
-    loginDiv.classList.remove("hidden");
-    appDiv.classList.add("hidden");
-    passwordInput.value = "";
-    notes.innerHTML = "";
-  };
-
-  document.getElementById("saveBtn").onclick = async () => {
-    const text = newNote.value.trim();
-    if (!text) return;
-
-    await addDoc(collection(db, "notes"), {
-      text,
-      uid: userId,
-      date: new Date().toISOString()
-    });
-
-    newNote.value = "";
+// Login
+document.getElementById("loginBtn").onclick = () => {
+  if (passwordInput.value === PASSWORD) {
+    userId = "anon_user"; // ID fixo para notas
+    loginDiv.classList.add("hidden");
+    appDiv.classList.remove("hidden");
     loadNotes();
-  };
+  } else {
+    alert("Senha incorreta!");
+  }
+};
 
-  async function loadNotes() {
-    notes.innerHTML = "";
-    if (!userId) return;
+// Logout
+document.getElementById("logoutBtn").onclick = () => {
+  userId = null;
+  loginDiv.classList.remove("hidden");
+  appDiv.classList.add("hidden");
+  passwordInput.value = "";
+  notes.innerHTML = "";
+};
 
-    const snap = await getDocs(collection(db, "notes"));
+// Salvar nova nota
+document.getElementById("saveBtn").onclick = async () => {
+  const text = newNote.value.trim();
+  if (!text) return;
 
-    snap.forEach(d => {
-      const n = d.data();
-      if (n.uid !== userId) return; // Só mostra notas do usuário anônimo atual
+  await addDoc(collection(db, "notes"), {
+    text,
+    uid: userId,
+    date: new Date().toISOString()
+  });
 
-      const div = document.createElement("div");
-      div.className = "note";
-      div.innerHTML = `
-        <div class="date">${new Date(n.date).toLocaleString()}</div>
-        <div>${n.text}</div>
-        <button class="delete">🗑 Excluir</button>
+  newNote.value = "";
+  loadNotes();
+};
+
+// Carregar notas
+async function loadNotes() {
+  notes.innerHTML = "";
+  if (!userId) return;
+
+  const snap = await getDocs(collection(db, "notes"));
+
+  snap.forEach(d => {
+    const n = d.data();
+    if (n.uid !== userId) return;
+
+    const div = document.createElement("div");
+    div.className = "note";
+    div.innerHTML = `
+      <div class="date">${new Date(n.date).toLocaleString()}</div>
+      <div class="text">${n.text}</div>
+      <button class="edit">✏️ Editar</button>
+      <button class="delete">🗑 Excluir</button>
+    `;
+
+    // Deletar nota
+    div.querySelector(".delete").onclick = async () => {
+      if (confirm("Excluir esta nota?")) {
+        await deleteDoc(doc(db, "notes", d.id));
+        loadNotes();
+      }
+    };
+
+    // Editar nota
+    div.querySelector(".edit").onclick = () => {
+      const textDiv = div.querySelector(".text");
+      const currentText = textDiv.textContent;
+      textDiv.innerHTML = `
+        <textarea class="editArea">${currentText}</textarea>
+        <button class="saveEdit">💾 Salvar</button>
+        <button class="cancelEdit">❌ Cancelar</button>
       `;
 
-      div.querySelector(".delete").onclick = async () => {
-        if (confirm("Excluir esta nota?")) {
-          await deleteDoc(doc(db, "notes", d.id));
-          loadNotes();
-        }
+      div.querySelector(".saveEdit").onclick = async () => {
+        const newText = div.querySelector(".editArea").value.trim();
+        if (!newText) return alert("O texto não pode estar vazio!");
+        await addDoc(collection(db, "notes"), {
+          text: newText,
+          uid: userId,
+          date: n.date
+        });
+        await deleteDoc(doc(db, "notes", d.id));
+        loadNotes();
       };
 
-      notes.appendChild(div);
-    });
-  }
+      div.querySelector(".cancelEdit").onclick = () => {
+        textDiv.textContent = currentText;
+      };
+    };
+
+    notes.appendChild(div);
+  });
+}
 </script>
 </body>
 </html>
